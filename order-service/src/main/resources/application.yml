@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:orderdb}
+    username: ${POSTGRES_USER:order}
+    password: ${POSTGRES_PASSWORD:order}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        default_schema: public
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      properties:
+        isolation.level: read_committed
+
+app:
+  kafka:
+    topics:
+      order-created: order.created
+      order-confirmed: order.confirmed
+      inventory-reserved: inventory.reserved
+      payment-failed: payment.failed
+      inventory-failed: inventory.failed
+    consumer-groups:
+      inventory-reserved: order-service-inventory-reserved
+      payment-failed: order-service-payment-failed
+      inventory-failed: order-service-inventory-failed
+    listener:
+      retry-interval-ms: 1000
+      max-attempts: 3
+
+logging:
+  pattern:
+    console: "%d{ISO8601} [%X{correlationId}] [%thread] %-5level %logger{36} - %msg%n"

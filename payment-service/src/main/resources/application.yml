@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: payment-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:paymentdb}
+    username: ${POSTGRES_USER:payment}
+    password: ${POSTGRES_PASSWORD:payment}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        default_schema: public
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      properties:
+        isolation.level: read_committed
+
+app:
+  kafka:
+    topics:
+      order-created: order.created
+      payment-confirmed: payment.confirmed
+      payment-failed: payment.failed
+      payment-refund-requested: payment.refund.requested
+    consumer-groups:
+      order-created: payment-service-order-created
+      payment-refund-requested: payment-service-payment-refund-requested
+    listener:
+      retry-interval-ms: 1000
+      max-attempts: 3
+  payment:
+    stub:
+      # Fail charge for this customerId (for testing failure path)
+      fail-customer-id: fail-payment
+      # Fail charge when amount > this (0 = disabled)
+      fail-above-amount: 0
+
+logging:
+  pattern:
+    console: "%d{ISO8601} [%X{correlationId}] [%thread] %-5level %logger{36} - %msg%n"
